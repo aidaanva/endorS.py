@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 """Script to calculate the endogenous DNA in a sample from samtools flag stats.
 It accepts can accept up to two files: pre-quality and post-quality filtering. We recommend
 to use both files but you can also use the pre-quality filtering.
