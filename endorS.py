@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 """Script to calculate the endogenous DNA in a sample from samtools flag stats.
 It accepts can accept up to two files: pre-quality and post-quality filtering. We recommend
 to use both files but you can also use the pre-quality filtering.
@@ -73,7 +75,7 @@ else:
     "plot_type": "generalstats",
     "pconfig": {
         "endogenous_dna": { "max": 100, "min": 0, "title": "Endogenous DNA (%)"},
-        "endogenous_dna_post": { "max": 100, "min": 0, "title": "Endogenous DNA Post(%)"}
+        "endogenous_dna_post": { "max": 100, "min": 0, "title": "Endogenous DNA Post (%)"}
     },
     "data": {
         name : { "endogenous_dna": endogenousPre, "endogenous_dna_post": endogenousPost}
