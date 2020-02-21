@@ -1,7 +1,7 @@
 # endorS.py
 endorS.py calculates endogenous DNA from samtools flagstat files and print to screen
 
-## Usage 
+## Usage
 ```bash
 python endorS.py [-h] [--version] <samplesfile>.stats [<samplesfile>.stats]
 ```
@@ -22,4 +22,7 @@ optional arguments:
   --output [OUTPUT], -o [OUTPUT]
                         specify a file format for an output file. Options: <json> for a MultiQC json output. Default:
                         none
+  --name [NAME], -n [NAME]
+                       specify name for the output file. Default: extracted from the first samtools flagstat file provided
+                        
 ```
