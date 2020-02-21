@@ -25,6 +25,7 @@ parser.add_argument('samtoolsfiles', metavar='<samplefile>.stats', type=str, nar
                     help='output of samtools flagstat in a txt file (at least one required). If two files are supplied, the mapped reads of the second file is divided by the total reads in the first, since it assumes that the <samplefile.stats> are related to the same sample. Useful after BAM filtering')
 parser.add_argument('-v','--version', action='version', version='%(prog)s 0.1')
 parser.add_argument('--output', '-o', nargs='?', help='specify a file format for an output file. Options: <json> for a MultiQC json output. Default: none')
+parser.add_argument('--name', '-n', nargs='?', help='specify name for the output file. Default: extracted from the first samtools flagstat file provided')
 args = parser.parse_args()
 
 #Open the samtools flag stats pre-quality filtering:
@@ -35,9 +36,6 @@ try:
     totalReads = float((re.findall(r'^([0-9]+) \+ [0-9]+ in total',contentsPre))[0])
     #Extract number of mapped reads pre-quality filtering:
     mappedPre = float((re.findall(r'([0-9]+) \+ [0-9]+ mapped ',contentsPre))[0])
-    #Set up the name of the output json:
-    name= str(((sys.argv[1].rsplit(".",1)[0]).rsplit("/"))[-1])
-    #print(name)
     #Calculation of endogenous DNA pre-quality filtering:
     endogenousPre = float("{0:.2f}".format(round((mappedPre / totalReads * 100), 2)))
 except:
@@ -57,6 +55,15 @@ except:
     #Set the number of reads post-quality filtering to 0 if samtools
     #samtools flag stats not provided:
     mappedPost = "NA"
+
+#Setting the name depending on the -name flag:
+if args.name is not None:
+    name = args.name
+else:
+    #Set up the name based on the first samtools flagstats:
+    name= str(((sys.argv[1].rsplit(".",1)[0]).rsplit("/"))[-1])
+#print(name)
+
 
 if mappedPost == "NA":
     #Creating the json file
