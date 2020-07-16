@@ -37,7 +37,14 @@ try:
     #Extract number of mapped reads pre-quality filtering:
     mappedPre = float((re.findall(r'([0-9]+) \+ [0-9]+ mapped ',contentsPre))[0])
     #Calculation of endogenous DNA pre-quality filtering:
-    endogenousPre = float("{0:.6f}".format(round((mappedPre / totalReads * 100), 6)))
+    if totalReads == 0.0:
+        endogenousPre = 0.000000
+        print("WARNING: no reads in the fastq input, Endogenous DNA raw (%) set to 0.000000")
+    elif mappedPre == 0.0:
+        endogenousPre = 0.000000
+        print("WARNING: no mapped reads, Endogenous DNA raw (%) set to 0.000000")
+    else:
+        endogenousPre = float("{0:.6f}".format(round((mappedPre / totalReads * 100), 6)))
 except:
     print("Incorrect input, please provide at least a samtools flag stats as input\nRun:\npython endorS.py --help \nfor more information on how to run this script")
     sys.exit()
@@ -49,7 +56,14 @@ try:
     #Extract number of mapped reads post-quality filtering:
     mappedPost = float((re.findall(r'([0-9]+) \+ [0-9]+ mapped',contentsPost))[0])
     #Calculation of endogenous DNA post-quality filtering:
-    endogenousPost = float("{0:.6f}".format(round((mappedPost / totalReads * 100),6)))
+    if totalReads == 0.0:
+        endogenousPost = 0.000000
+        print("WARNING: no reads in the fastq input, Endogenous DNA raw (%) set to 0.000000")
+    elif mappedPost == 0.0:
+        endogenousPost = 0.000000
+        print("WARNING: no mapped reads, Endogenous DNA modified (%) set to 0.000000")
+    else:
+        endogenousPost = float("{0:.6f}".format(round((mappedPost / totalReads * 100),6)))
 except:
     print("Only one samtools flagstat file provided")
     #Set the number of reads post-quality filtering to 0 if samtools
