@@ -37,7 +37,7 @@ try:
     #Extract number of mapped reads pre-quality filtering:
     mappedPre = float((re.findall(r'([0-9]+) \+ [0-9]+ mapped ',contentsPre))[0])
     #Calculation of endogenous DNA pre-quality filtering:
-    endogenousPre = float("{0:.2f}".format(round((mappedPre / totalReads * 100), 2)))
+    endogenousPre = float("{0:.6f}".format(round((mappedPre / totalReads * 100), 6)))
 except:
     print("Incorrect input, please provide at least a samtools flag stats as input\nRun:\npython endorS.py --help \nfor more information on how to run this script")
     sys.exit()
@@ -49,7 +49,7 @@ try:
     #Extract number of mapped reads post-quality filtering:
     mappedPost = float((re.findall(r'([0-9]+) \+ [0-9]+ mapped',contentsPost))[0])
     #Calculation of endogenous DNA post-quality filtering:
-    endogenousPost = float("{0:.2f}".format(round((mappedPost / totalReads * 100),2)))
+    endogenousPost = float("{0:.6f}".format(round((mappedPost / totalReads * 100),6)))
 except:
     print("Only one samtools flagstat file provided")
     #Set the number of reads post-quality filtering to 0 if samtools
@@ -79,14 +79,15 @@ if mappedPost == "NA":
 else:
     #Creating the json file
     jsonOutput={
+    "id": "custom_endogenous_calculation",
     "plot_type": "generalstats",
     "pconfig": {
-        "endogenous_dna": { "max": 100, "min": 0, "title": "Endogenous DNA (%)"},
-        "endogenous_dna_post": { "max": 100, "min": 0, "title": "Endogenous DNA Post (%)"}
+        "endogenous_dna": { "max": 100, "min": 0, "title": "Endogenous DNA (%)", "format": '{:,.2f}'},
+        "endogenous_dna_post": { "max": 100, "min": 0, "title": "Endogenous DNA Post (%)", "format": '{:,.2f}'}
     },
     "data": {
         name : { "endogenous_dna": endogenousPre, "endogenous_dna_post": endogenousPost}
-    }
+    },
     }
 #Checking for print to screen argument:
 if args.output is not None:
