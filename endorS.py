@@ -68,9 +68,10 @@ else:
 if mappedPost == "NA":
     #Creating the json file
     jsonOutput={
+    "id": "custom_endogenous_calculation",
     "plot_type": "generalstats",
     "pconfig": {
-        "endogenous_dna": { "max": 100, "min": 0, "title": "Endogenous DNA (%)"}
+        "endogenous_dna": { "max": 100, "min": 0, "title": "Endogenous DNA (%)", "format": '{:,.2f}'}
     },
     "data": {
         name : { "endogenous_dna": endogenousPre}
