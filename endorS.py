@@ -68,7 +68,7 @@ else:
 if mappedPost == "NA":
     #Creating the json file
     jsonOutput={
-    "id": "custom_endogenous_calculation",
+    "id": "endorS.py ",
     "plot_type": "generalstats",
     "pconfig": {
         "endogenous_dna": { "max": 100, "min": 0, "title": "Endogenous DNA (%)", "format": '{:,.2f}'}
@@ -80,7 +80,7 @@ if mappedPost == "NA":
 else:
     #Creating the json file
     jsonOutput={
-    "id": "custom_endogenous_calculation",
+    "id": "endorS.py ",
     "plot_type": "generalstats",
     "pconfig": {
         "endogenous_dna": { "max": 100, "min": 0, "title": "Endogenous DNA (%)", "format": '{:,.2f}'},
