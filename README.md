@@ -3,7 +3,7 @@ endorS.py calculates endogenous DNA from samtools flagstat files and print to sc
 
 ## Usage
 ```bash
-python endorS.py [-h] [--version] <samplesfile>.stats [<samplesfile>.stats]
+endorS.py [-h] [--version] <samplesfile>.stats [<samplesfile>.stats]
 ```
 
 ## Author
