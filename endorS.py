@@ -26,6 +26,9 @@ parser.add_argument('samtoolsfiles', metavar='<samplefile>.stats', type=str, nar
 parser.add_argument('-v','--version', action='version', version='%(prog)s 0.4')
 parser.add_argument('--output', '-o', nargs='?', help='specify a file format for an output file. Options: <json> for a MultiQC json output. Default: none')
 parser.add_argument('--name', '-n', nargs='?', help='specify name for the output file. Default: extracted from the first samtools flagstat file provided')
+parser.add_argument('--postdedupflagstats', '-p', type=str, nargs='?')
+parser.add_argument('--qualityfiltering', '-q', action='store_true', help='calculates endogenous when no quality filtering has been performed')
+parser.add_argument('--cfactor', '-c', action='store_true', help='calculates Reads mapped pre deduplication/Read mapped post deduplication. WARNING= Only calculated when 2 or 3 (using the -p option) samtools flagstats provided')
 args = parser.parse_args()
 
 #Open the samtools flag stats pre-quality filtering:
@@ -78,32 +81,127 @@ else:
     name= str(((args.samtoolsfiles[0].rsplit(".",1)[0]).rsplit("/"))[-1])
 #print(name)
 
+#set reads mapped as well as cluster factor to NA
+mappedPostD = "NA"
+clusterFactor = "NA"
 
-if mappedPost == "NA":
-    #Creating the json file
-    jsonOutput={
-    "id": "endorSpy",
-    "plot_type": "generalstats",
-    "pconfig": {
-        "endogenous_dna": { "max": 100, "min": 0, "title": "Endogenous DNA (%)", "format": '{:,.2f}'}
-    },
-    "data": {
-        name : { "endogenous_dna": endogenousPre}
-    }
-    }
+#Read 3rd samtools flag stats if --postdedupflagstats used
+if args.postdedupflagstats is not None:
+    try:
+        #Open the samtools flag stats post-quality filtering:
+        with open(args.postdedupflagstats, 'r') as postdedup:
+            contentsPostD = postdedup.read()
+        #Extract number of mapped reads post-quality filtering:
+        mappedPostD = float((re.findall(r'([0-9]+) \+ [0-9]+ mapped',contentsPostD))[0])
+        #Calculation of endogenous DNA as post-dedup reads/total reads filtering:
+        if totalReads == 0.0:
+            print("WARNING: no reads in the fastq input, Endogenous DNA raw (%) set to 0.000000")
+        elif mappedPostD == 0.0:
+            endogenousPostD = 0.000000
+            print("WARNING: no mapped reads, Endogenous DNA modified post dedup (%) set to 0.000000")
+        elif mappedPost == "NA":
+            print("WARNING: No post quality filtering samtools flag provided, no Endogenous DNA modified post dedup (%) nor cluster factor calculated")
+        else:
+            endogenousPostD = float("{0:.6f}".format(round((mappedPostD / totalReads * 100),6)))
+    except:
+        print("No post deduplication samtools flags provided")
+
+
+ #Calculate cluster factor if -c provided:
+if args.cfactor is not False and mappedPost != "NA":
+    if args.postdedupflagstats is None:
+        clusterFactor = float("{0:.6f}".format(round((mappedPre / mappedPost),6)))
+    else:
+        clusterFactor = float("{0:.6f}".format(round((mappedPost / mappedPostD),6)))
+
+    
+
+#Check if -p provided, only case when mappedPostD is not NA
+if mappedPostD == "NA":
+    #Check if second samtools flagstats provided, only then mappedPost is not NA
+    if mappedPost == "NA":
+        jsonOutput={
+        "id": "endorSpy",
+        "plot_type": "generalstats",
+        "pconfig": {
+            "endogenous_dna": { "max": 100, "min": 0, "title": "Endogenous DNA (%)", "format": '{:,.2f}'},
+        },
+        "data": {
+            name : { "endogenous_dna": endogenousPre}
+        },
+        }
+        print("Endogenous DNA raw (%):",endogenousPre)
+    #Check if cluster factor flag provided (-c)
+    elif args.cfactor is not False:
+        jsonOutput={
+        "id": "endorSpy",
+        "plot_type": "generalstats",
+        "pconfig": {
+            "endogenous_dna": { "max": 100, "min": 0, "title": "Endogenous DNA (%)", "format": '{:,.2f}'},
+            "endogenous_dna_post": { "max": 100, "min": 0, "title": "Endogenous DNA Post (%)", "format": '{:,.2f}'},
+            "cluster_factor": { "max": 100, "min": 0, "title": "Cluster Factor", "format": '{:,.2f}'}
+        },
+        "data": {
+            name : { "endogenous_dna": endogenousPre, "endogenous_dna_post": endogenousPost, "cluster_factor": clusterFactor}
+        ,
+        }
+        }
+        print("Endogenous DNA raw (%):",endogenousPre)
+        print("Endogenous DNA modified (%):",endogenousPost)
+        print("Cluster factor:",clusterFactor)
+    else:
+        #Reporting only pre and post quality filtering
+        jsonOutput={
+        "id": "endorSpy",
+        "plot_type": "generalstats",
+        "pconfig": {
+            "endogenous_dna": { "max": 100, "min": 0, "title": "Endogenous DNA (%)", "format": '{:,.2f}'},
+            "endogenous_dna_post": { "max": 100, "min": 0, "title": "Endogenous DNA Post (%)", "format": '{:,.2f}'}
+        },
+        "data": {
+            name : { "endogenous_dna": endogenousPre, "endogenous_dna_post": endogenousPost}
+        },
+        }
+        print("Endogenous DNA raw (%):",endogenousPre)
+        print("Endogenous DNA modified (%):",endogenousPost)
 else:
-    #Creating the json file
-    jsonOutput={
-    "id": "endorSpy",
-    "plot_type": "generalstats",
-    "pconfig": {
-        "endogenous_dna": { "max": 100, "min": 0, "title": "Endogenous DNA (%)", "format": '{:,.2f}'},
-        "endogenous_dna_post": { "max": 100, "min": 0, "title": "Endogenous DNA Post (%)", "format": '{:,.2f}'}
-    },
-    "data": {
-        name : { "endogenous_dna": endogenousPre, "endogenous_dna_post": endogenousPost}
-    },
-    }
+    if args.cfactor is not False:
+        #Creating the json file: pre, post, postdedup (-p), cluster factor (-c) reported
+        jsonOutput={
+        "id": "endorSpy",
+        "plot_type": "generalstats",
+        "pconfig": {
+            "endogenous_dna": { "max": 100, "min": 0, "title": "Endogenous DNA (%)", "format": '{:,.2f}'},
+            "endogenous_dna_post": { "max": 100, "min": 0, "title": "Endogenous DNA Post (%)", "format": '{:,.2f}'},
+            "endogenous_dna_post_dedup": { "max": 100, "min": 0, "title": "Endogenous DNA Post Dedup (%)", "format": '{:,.2f}'},
+            "cluster_factor": { "max": 100, "min": 0, "title": "Cluster Factor", "format": '{:,.2f}'}
+        },
+        "data": {
+            name : { "endogenous_dna": endogenousPre, "endogenous_dna_post": endogenousPost, "endogenous_dna_post_dedup": endogenousPostD, "cluster_factor": clusterFactor}
+        },
+        }
+        print("Endogenous DNA raw (%):",endogenousPre)
+        print("Endogenous DNA modified (%):",endogenousPost)
+        print("Endogenous DNA modfied post deduplication (%):",endogenousPostD)
+        print("Cluster factor:",clusterFactor)
+    else:
+        #Creating the json file: pre, post, postdedup (-p) no -c
+        jsonOutput={
+        "id": "endorSpy",
+        "plot_type": "generalstats",
+        "pconfig": {
+            "endogenous_dna": { "max": 100, "min": 0, "title": "Endogenous DNA (%)", "format": '{:,.2f}'},
+            "endogenous_dna_post": { "max": 100, "min": 0, "title": "Endogenous DNA Post (%)", "format": '{:,.2f}'},
+            "endogenous_dna_post_dedup": { "max": 100, "min": 0, "title": "Endogenous DNA Post Dedup (%)", "format": '{:,.2f}'},
+        },
+        "data": {
+            name : { "endogenous_dna": endogenousPre, "endogenous_dna_post": endogenousPost, "endogenous_dna_post_dedup": endogenousPostD}
+        },
+        }
+        print("Endogenous DNA raw (%):",endogenousPre)
+        print("Endogenous DNA modified (%):",endogenousPost)
+        print("Endogenous DNA modfied post deduplication (%):",endogenousPostD)
+
 #Checking for print to screen argument:
 if args.output is not None:
    #Creating file with the named after the name variable:
@@ -113,9 +211,4 @@ if args.output is not None:
    with open(fileName, "w+") as outfile:
       json.dump(jsonOutput, outfile)
       print(fileName,"has been generated")
-else:
-   if mappedPost == "NA":
-      print("Endogenous DNA (%):",endogenousPre)
-   else:
-      print("Endogenous DNA raw (%):",endogenousPre)
-      print("Endogenous DNA modified (%):",endogenousPost)
+print("All done!")
