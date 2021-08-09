@@ -27,7 +27,7 @@ parser.add_argument('-v','--version', action='version', version='%(prog)s 0.4')
 parser.add_argument('--output', '-o', nargs='?', help='specify a file format for an output file. Options: <json> for a MultiQC json output. Default: none')
 parser.add_argument('--name', '-n', nargs='?', help='specify name for the output file. Default: extracted from the first samtools flagstat file provided')
 parser.add_argument('--postdedupflagstats', '-p', type=str, nargs='?')
-parser.add_argument('--qualityfiltering', '-q', action='store_true', help='calculates endogenous when no quality filtering has been performed')
+#parser.add_argument('--qualityfiltering', '-q', action='store_true', help='calculates endogenous when no quality filtering has been performed')
 parser.add_argument('--cfactor', '-c', action='store_true', help='calculates Reads mapped pre deduplication/Read mapped post deduplication. WARNING= Only calculated when 2 or 3 (using the -p option) samtools flagstats provided')
 args = parser.parse_args()
 
