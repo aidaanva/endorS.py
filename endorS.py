@@ -102,7 +102,7 @@ if args.dedupflagstats is not None:
         else:
             endogenousPostD = float("{0:.6f}".format(round((mappedPostD / totalReads * 100),6)))
             clusterFactor = float("{0:.6f}".format(round((mappedPre / mappedPostD),6)))
-            percentDuplicates = float("{0:.6f}".format(round((mappedPostD / mappedPost * 100),6)))
+            percentDuplicates = float("{0:.6f}".format(round(((mappedPost - mappedPostD) / mappedPost * 100),6)))
     except:
         print("No post deduplication samtools flags provided")
 
