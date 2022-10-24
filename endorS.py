@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
-"""Script to calculate the Percent on Target (aka Endogenous DNA) in a sample from samtools flag stats.
-It accepts can accept up to two files: pre-quality and post-quality filtering. We recommend
-to use both files but you can also use the pre-quality filtering.
+"""Script to calculate the Percent on Target (aka Endogenous DNA), clonality and percent of duplicates in a sample from samtools flag stats.
+It accepts can accept up to three files: pre-quality, post-quality filtering and post-dedup. We recommend
+to use all files but you can also use with a combination of any those samtools flagstats.
 """
 import re
 import sys
@@ -11,165 +11,242 @@ import argparse
 import textwrap
 
 parser = argparse.ArgumentParser(prog='endorS.py',
-   usage='python %(prog)s [-h] [--version] <samplesfile>.stats [<samplesfile>.stats]',
-   formatter_class=argparse.RawDescriptionHelpFormatter,
-   description=textwrap.dedent('''\
-   author:
-     Aida Andrades Valtueña (aida.andrades[at]gmail.com)
-
-   description:
-     %(prog)s calculates Percent on Target (aka Endogenous DNA) from samtools flagstat files and print to screen
-     Use --output flag to write results to a file
-   '''))
-parser.add_argument('samtoolsfiles', metavar='<samplefile>.stats', type=str, nargs='+',
-                    help='output of samtools flagstat in a txt file (at least one required). If two files are supplied, the mapped reads of the second file is divided by the total reads in the first, since it assumes that the <samplefile.stats> are related to the same sample. Useful after BAM filtering')
+    usage='python %(prog)s [-h] [--version] -r [<samplesfile>.stats] -qF [<samplesfile>.stats] -dedup [<samplesfile>.stats]',
+    formatter_class=argparse.RawDescriptionHelpFormatter,
+    description=textwrap.dedent('''\
+        author:
+        Aida Andrades Valtueña (aida.andrades[at]gmail.com)
+        
+        description:
+        %(prog)s calculates Percent on Target (aka Endogenous DNA) from samtools flagstat files and print to screen.
+        The Percent on Target reported will be different depending on the combination of samtools flagstat provided.
+        This program also calculates clonality (aka Cluster Factor) and percent duplicates when the flagstat file after duplicate removal is provided
+        Use --output flag to write results to a file
+        '''))
+parser.add_argument('--raw', '-r',
+                    metavar='<samplefile>.stats', 
+                    type=str, nargs='?', 
+                    help= 'output of samtools flagstat in a txt file, assumes no quality filtering nor adapter removal performed')
+parser.add_argument('--qualityfiltered', '-qf',
+                    metavar='<samplefile>.stats', 
+                    type=str, nargs='?', 
+                    help= 'output of samtools flagstat in a txt file, assumes quality filtering has been performed, must be provided with at least one of the options -r or -dedup')
+parser.add_argument('--deduplicated', '-dedup',
+                    metavar='<samplefile>.stats', 
+                    type=str, nargs='?', 
+                    help= 'output of samtools flagstat in a txt file, duplicate removal has been performed')
+#parser.add_argument('samtoolsfiles', metavar='<samplefile>.stats', type=str, nargs='+',
+#                    help='output of samtools flagstat in a txt file (at least one required). If two files are supplied, the mapped reads of the second file is divided by the total reads in the first, since it assumes that the <samplefile.stats> are related to the same sample. Useful after BAM filtering')
 parser.add_argument('-v','--version', action='version', version='%(prog)s 0.4')
 parser.add_argument('--output', '-o', nargs='?', help='specify a file format for an output file. Options: <json> for a MultiQC json output. Default: none')
 parser.add_argument('--name', '-n', nargs='?', help='specify name for the output file. Default: extracted from the first samtools flagstat file provided')
-parser.add_argument('--dedupflagstats', '-d', type=str, nargs='?')
+#parser.add_argument('--dedupflagstats', '-d', type=str, nargs='?')
 args = parser.parse_args()
 
-#Open the samtools flag stats pre-quality filtering:
+#Check if at least one of the samtools flagstat provided
+
+if ((args.raw is None) and (args.qualityfiltered is None) and (args.deduplicated is None)):
+    print("ERROR: no samtools flagstat provided, please provide at least one samtools flagstat files with the flags --raw, --qualityfiltered or -deduplicated.\nRun:\npython endorS.py --help \nfor more information on how to run this script")
+    sys.exit()
+
+if ((args.raw is None) and (args.deduplicated is None)):
+    print("ERROR: only --qualityfiltered samtools flagstat file provided. No stats can be calculated")
+    sys.exit()
+
 try:
-    with open(args.samtoolsfiles[0], 'r') as pre:
-        contentsPre = pre.read()
+    with open(args.raw, 'r') as raw:
+        contentsRaw = raw.read()
     #Extract number of total reads
-    totalReads = float((re.findall(r'^([0-9]+) \+ [0-9]+ in total',contentsPre))[0])
+    totalReads = float((re.findall(r'^([0-9]+) \+ [0-9]+ in total',contentsRaw))[0])
     #Extract number of mapped reads pre-quality filtering:
-    mappedPre = float((re.findall(r'([0-9]+) \+ [0-9]+ mapped ',contentsPre))[0])
-    #Calculation of endogenous DNA pre-quality filtering:
+    mappedRaw = float((re.findall(r'([0-9]+) \+ [0-9]+ mapped ',contentsRaw))[0])
+
+    #Calculate Percentage on target raw (aka endogenous raw)
     if totalReads == 0.0:
-        endogenousPre = 0.000000
+        endogenousRaw = 0.000000
         print("WARNING: no reads in the fastq input, Percent on Target raw (%) set to 0.000000")
-    elif mappedPre == 0.0:
-        endogenousPre = 0.000000
+    elif mappedRaw == 0.0:
+        endogenousRaw = 0.000000
         print("WARNING: no mapped reads, Percent on Target raw (%) set to 0.000000")
     else:
-        endogenousPre = float("{0:.6f}".format(round((mappedPre / totalReads * 100), 6)))
+        endogenousRaw = float("{0:.6f}".format(round((mappedRaw / totalReads * 100), 6)))
 except:
-    print("Incorrect input, please provide at least a samtools flag stats as input\nRun:\npython endorS.py --help \nfor more information on how to run this script")
-    sys.exit()
-#Check if the samtools stats post-quality filtering have been provided:
+    print("No samtools flagstat --raw provided. \nWARNING: none of the Percent on Target stats will be calculated")
+
 try:
-    #Open the samtools flag stats post-quality filtering:
-    with open(args.samtoolsfiles[1], 'r') as post:
-        contentsPost = post.read()
+    with open(args.qualityfiltered, 'r') as qF:
+        contentsqF = qF.read()
     #Extract number of mapped reads post-quality filtering:
-    mappedPost = float((re.findall(r'([0-9]+) \+ [0-9]+ mapped',contentsPost))[0])
-    #Calculation of endogenous DNA post-quality filtering:
-    if totalReads == 0.0:
-        endogenousPost = 0.000000
-        print("WARNING: no reads in the fastq input, Percent on Target raw (%) set to 0.000000")
-    elif mappedPost == 0.0:
-        endogenousPost = 0.000000
-        print("WARNING: no mapped reads, Percent on Target modified (%) set to 0.000000")
-    else:
-        endogenousPost = float("{0:.6f}".format(round((mappedPost / totalReads * 100),6)))
+    mappedPost = float((re.findall(r'([0-9]+) \+ [0-9]+ mapped',contentsqF))[0])
+    #Calculation of Percent on Target modified (aka endogenous DNA post-quality filtering):
+    if args.raw is not None:
+        if totalReads == 0.0:
+            endogenousQF = 0.000000
+            print("WARNING: no reads in the fastq input, Percent on Target raw (%) set to 0.000000")
+        elif mappedPost == 0.0:
+            endogenousQF = 0.000000
+            print("WARNING: no mapped reads, Percent on Target modified (%) set to 0.000000")
+        else:
+            endogenousQF = float("{0:.6f}".format(round(( mappedPost / totalReads * 100),6)))
 except:
-    print("Only one samtools flagstat file provided")
-    #Set the number of reads post-quality filtering to 0 if samtools
-    #samtools flag stats not provided:
-    mappedPost = "NA"
+    print("No samtools flagstat --qualityfiltered provided. \nWARNING: Percent on Target Modified stat will not be calculated")
+
+try:
+    with open(args.deduplicated, 'r') as deDup:
+        contentsdeDup= deDup.read()
+    #Extract number of reads pre dedup
+    totalPreDedup = float((re.findall(r'^([0-9]+) \+ [0-9]+ in total',contentsdeDup))[0])
+    #Extract number of mapped reads pre-quality filtering:
+    mappedDedup = float((re.findall(r'([0-9]+) \+ [0-9]+ mapped ',contentsdeDup))[0])
+    #Check if --raw provided and calculate Percent on Target PostDedup
+    if args.raw is not None:
+        if totalReads == 0.0:
+            endogenousDeDup = 0.000000
+            print("WARNING: no reads in the fastq input, Percent on Target PostDeDup (%) set to 0.000000")
+        elif mappedDedup == 0.0:
+            endogenousDeDup = 0.000000
+            print("WARNING: no mapped reads, Percent on Target PostDeDup (%) set to 0.000000")
+        else:
+            endogenousDeDup = float("{0:.6f}".format(round((mappedDedup / totalReads * 100),6)))
+    #Calculate clonality (aka cluster factor)
+    try:
+        clonality=float("{0:.6f}".format(round(( totalPreDedup / mappedDedup),6)))
+    except ZeroDivisionError:
+        clonality = 0
+        print("WARNING: non mapped reads postDeDup and/or preDeDup, check your BAM file. Clonality set to 0.000000")
+    #Calculate Percentage of Duplicates
+    try:
+        percentDuplicates=float("{0:.6f}".format(round((((totalPreDedup - mappedDedup) / totalPreDedup) * 100),6)))
+    except ZeroDivisionError:
+        percentDuplicates = 0
+        print("WARNING: non mapped reads postDeDup and/or preDeDup, check your BAM file. Percent Duplicates set to 0.000000")
+except:
+    print("No samtools flagstat --deduplicated provided. \nWARNING: Percent on Target PostDedup, Clonality and Percent of Duplicates stats will not be calculated!")
 
 #Setting the name depending on the -name flag:
 if args.name is not None:
     name = args.name
 else:
     #Set up the name based on the first samtools flagstats:
-    name= str(((args.samtoolsfiles[0].rsplit(".",1)[0]).rsplit("/"))[-1])
+    if args.raw is not None:
+        name = str(((args.raw.rsplit(".",1)[0]).rsplit("/"))[-1])
+    elif args.qualityfiltered is not None:
+        name = str(((args.qualityfiltered.rsplit(".",1)[0]).rsplit("/"))[-1])
+    else:
+        name = str(((args.deduplicated.rsplit(".",1)[0]).rsplit("/"))[-1])
 #print(name)
 
-#set reads mapped as well as Clonality to NA
-mappedPostD = "NA"
-clusterFactor = "NA"
+#Creating output
 
-#Read 3rd samtools flag stats if --dedupflagstats used
-if args.dedupflagstats is not None:
-    try:
-        #Open the samtools flag stats post-quality filtering:
-        with open(args.dedupflagstats, 'r') as postdedup:
-            contentsPostD = postdedup.read()
-        #Extract number of mapped reads post-quality filtering:
-        mappedPostD = float((re.findall(r'([0-9]+) \+ [0-9]+ mapped',contentsPostD))[0])
-        #Calculation of endogenous DNA as post-dedup reads/total reads filtering:
-        if totalReads == 0.0:
-            print("WARNING: no reads in the fastq input, Percent on Target raw (%) set to 0.000000")
-        elif mappedPostD == 0.0:
-            endogenousPostD = 0.000000
-            print("WARNING: no mapped reads, Percent on Target modified post dedup (%) set to 0.000000")
-        elif mappedPost == "NA":
-            print("WARNING: No post quality filtering samtools flag provided, no Percent on Target modified post dedup (%) nor clonality calculated")
+if args.raw is not None:
+    if args.qualityfiltered is not None:
+        #All samtools flagstat provided: Percent Target Raw, Percent Target Modified, Percent Target PostDedup, Clonality, Percent duplicates
+        if args.deduplicated is not None:
+            jsonOutput={
+                "id": "endorSpy",
+                "plot_type": "generalstats",
+                "pconfig": {
+                    "percent_on_target": { "max": 100, "min": 0, "title": "Percent on Target (%)", "format": '{:,.2f}'},
+                    "percent_on_target_modified": { "max": 100, "min": 0, "title": "Percent on Target modified (%)", "format": '{:,.2f}'},
+                    "percent_on_target_postdedup": { "max": 100, "min": 0, "title": "Percent on Target modified (%)", "format": '{:,.2f}'},
+                    "clonality": { "max": 100, "min": 0, "title": "Clonality", "format": '{:,.2f}'},
+                    "percent_duplicates": { "max": 100, "min": 0, "title": "Percent Duplicates (%)", "format": '{:,.2f}'}
+                },
+                "data": {
+                    name : { 
+                        "percent_on_target": endogenousRaw,
+                        "percent_on_target_modified": endogenousQF,
+                        "percent_on_target_postdedup": endogenousDeDup,
+                        "clonality": clonality,
+                        "percent_duplicates": percentDuplicates
+                        }
+                },
+            }
+            print("Percent on Target raw (%):",endogenousRaw)
+            print("Percent on Target modified (%):",endogenousQF)
+            print("Percent on Tardet PostDedup (%):", endogenousDeDup)
+            print("Clonality:",clonality)
+            print("Percent Duplicates (%):", percentDuplicates)
+        # Raw + QF: Percent Target Raw, Percent Target Modified
         else:
-            endogenousPostD = float("{0:.6f}".format(round((mappedPostD / totalReads * 100),6)))
-            clusterFactor = float("{0:.6f}".format(round((mappedPre / mappedPostD),6)))
-            percentDuplicates = float("{0:.6f}".format(round(((mappedPost - mappedPostD) / mappedPost * 100),6)))
-    except:
-        print("No post deduplication samtools flags provided")
-
-
-#Check if -p provided, only case when mappedPostD is not NA
-if mappedPostD == "NA":
-    #Check if second samtools flagstats provided, only then mappedPost is not NA
-    if mappedPost == "NA":
+            jsonOutput={
+                "id": "endorSpy",
+                "plot_type": "generalstats",
+                "pconfig": {
+                    "percent_on_target": { "max": 100, "min": 0, "title": "Percent on Target (%)", "format": '{:,.2f}'},
+                    "percent_on_target_modified": { "max": 100, "min": 0, "title": "Percent on Target modified (%)", "format": '{:,.2f}'}
+                },
+                "data": {
+                    name : { "percent_on_target": endogenousRaw, "percent_on_target_modified": endogenousQF}
+                },
+            }
+            print("Percent on Target raw (%):",endogenousRaw)
+            print("Percent on Target modified (%):",endogenousQF)
+    # Raw + Dedup: Percent Target Raw, Percent Target PostDedup, Clonality, Percent duplicates
+    elif args.deduplicated is not None:
         jsonOutput={
-        "id": "endorSpy",
-        "plot_type": "generalstats",
-        "pconfig": {
-            "percent_on_target": { "max": 100, "min": 0, "title": "Percent on Target (%)", "format": '{:,.2f}'},
-        },
-        "data": {
-            name : { "percent_on_target": endogenousPre}
-        },
-        }
-        print("Percent on Target raw (%):",endogenousPre)
+                "id": "endorSpy",
+                "plot_type": "generalstats",
+                "pconfig": {
+                    "percent_on_target": { "max": 100, "min": 0, "title": "Percent on Target (%)", "format": '{:,.2f}'},
+                    "percent_on_target_postdedup": { "max": 100, "min": 0, "title": "Percent on Target modified (%)", "format": '{:,.2f}'},
+                    "clonality": { "max": 100, "min": 0, "title": "Clonality", "format": '{:,.2f}'},
+                    "percent_duplicates": { "max": 100, "min": 0, "title": "Percent Duplicates (%)", "format": '{:,.2f}'}
+                },
+                "data": {
+                    name : { 
+                        "percent_on_target": endogenousRaw,
+                        "percent_on_target_postdedup": endogenousDeDup,
+                        "clonality": clonality,
+                        "percent_duplicates": percentDuplicates
+                        }
+                },
+            }
+        print("Percent on Target raw (%):",endogenousRaw)
+        print("Percent on Tardet PostDedup (%):", endogenousDeDup)
+        print("Clonality:",clonality)
+        print("Percent Duplicates (%):", percentDuplicates)
+    
+    #Only raw: Percent Target Raw
     else:
-        #Reporting only pre and post quality filtering
         jsonOutput={
-        "id": "endorSpy",
-        "plot_type": "generalstats",
-        "pconfig": {
-            "percent_on_target": { "max": 100, "min": 0, "title": "Percent on Target (%)", "format": '{:,.2f}'},
-            "percent_on_target_post": { "max": 100, "min": 0, "title": "Percent on Target Post (%)", "format": '{:,.2f}'}
-        },
-        "data": {
-            name : { "percent_on_target": endogenousPre, "percent_on_target_post": endogenousPost}
-        },
+            "id": "endorSpy",
+            "plot_type": "generalstats",
+            "pconfig": 
+            {
+                "percent_on_target": { "max": 100, "min": 0, "title": "Percent on Target (%)", "format": '{:,.2f}'},
+            },
+            "data": {
+                name : { "percent_on_target": endogenousRaw}
+            },
         }
-        print("Percent on Target raw (%):",endogenousPre)
-        print("Percent on Target modified (%):",endogenousPost)
+        print("Percent on Target raw (%):",endogenousRaw)
+#Only Dedup or Dedup + QF provided: clonality and percent duplicates reported
 else:
-    #Creating the json file: pre, post, postdedup (-d)
     jsonOutput={
-    "id": "endorSpy",
-    "plot_type": "generalstats",
-    "pconfig": {
-        "percent_on_target": { "max": 100, "min": 0, "title": "Percent on Target (%)", "format": '{:,.2f}'},
-        "percent_on_target_post": { "max": 100, "min": 0, "title": "Percent on Target Post (%)", "format": '{:,.2f}'},
-        "percent_on_target_post_dedup": { "max": 100, "min": 0, "title": "Percent on Target Post Dedup (%)", "format": '{:,.2f}'},
-        "clonality": { "max": 100, "min": 0, "title": "Clonality", "format": '{:,.2f}'},
-        "percent_duplicates": { "max": 100, "min": 0, "title": "Percent Duplicates (%)", "format": '{:,.2f}'}
-    },
-    "data": {
-        name : { "percent_on_target": endogenousPre, 
-        "percent_on_target_post": endogenousPost, 
-        "percent_on_target_post_dedup": endogenousPostD, 
-        "clonality": clusterFactor,
-        "percent_duplicates": percentDuplicates}
-    },
+                "id": "endorSpy",
+                "plot_type": "generalstats",
+                "pconfig": {
+                    "clonality": { "max": 100, "min": 0, "title": "Clonality", "format": '{:,.2f}'},
+                    "percent_duplicates": { "max": 100, "min": 0, "title": "Percent Duplicates (%)", "format": '{:,.2f}'}
+                },
+                "data": {
+                    name : { "clonality": clonality, "percent_duplicates": percentDuplicates }
+                },
     }
-    print("Percent on Target raw (%):",endogenousPre)
-    print("Percent on Target modified (%):",endogenousPost)
-    print("Percent on Target modified post deduplication (%):",endogenousPostD)
-    print("Clonality:",clusterFactor)
-    print("Percent Duplicates (%):",percentDuplicates)
+    print("Clonality:",clonality)
+    print("Percent Duplicates (%):", percentDuplicates)
+    
+
+
 
 #Checking for print to screen argument:
 if args.output is not None:
-   #Creating file with the named after the name variable:
-   #Writing the json output:
-   fileName = name + "_percent_on_target_mqc.json"
-   #print(fileName)
-   with open(fileName, "w+") as outfile:
-      json.dump(jsonOutput, outfile)
-      print(fileName,"has been generated")
+    #Creating file with the named after the name variable:
+    # #Writing the json output:
+    fileName = name + "_percent_on_target_mqc.json"
+    #print(fileName)
+    # with open(fileName, "w+") as outfile:
+    json.dump(jsonOutput, outfile)
+    print(fileName,"has been generated")
 print("All done!")
