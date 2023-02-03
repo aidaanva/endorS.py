@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-"""Script to calculate the Percent on target (aka Endogenous DNA), clonality and percent of duplicates in a sample from samtools flag stats.
+"""Script to calculate the Percent on target (aka Endogenous DNA), clonality, and percent of duplicates in a sample from samtools flag stats.
 It accepts can accept up to three files: pre-quality, post-quality filtering and post-dedup. We recommend
 to use all files but you can also use with a combination of any those samtools flagstats.
 """
@@ -30,11 +30,11 @@ parser.add_argument('--raw', '-r',
 parser.add_argument('--qualityfiltered', '-q',
                     metavar='<samplefile>.stats', 
                     type=str, nargs='?', 
-                    help= 'output of samtools flagstat in a txt file, assumes quality filtering has been performed, must be provided with at least one of the options -r or -dedup')
+                    help= 'output of samtools flagstat in a txt file, assumes some form of quality or length filtering has been performed, must be provided with at least one of the options -r or -dedup')
 parser.add_argument('--deduplicated', '-d',
                     metavar='<samplefile>.stats', 
                     type=str, nargs='?', 
-                    help= 'output of samtools flagstat in a txt file, duplicate removal has been performed')
+                    help= 'output of samtools flagstat in a txt file, whereby duplicate removal has been performed on the input reads')
 #parser.add_argument('samtoolsfiles', metavar='<samplefile>.stats', type=str, nargs='+',
 #                    help='output of samtools flagstat in a txt file (at least one required). If two files are supplied, the mapped reads of the second file is divided by the total reads in the first, since it assumes that the <samplefile.stats> are related to the same sample. Useful after BAM filtering')
 parser.add_argument('-v','--version', action='version', version='%(prog)s 0.4')
@@ -67,7 +67,7 @@ try:
     #Calculate Percentage on target raw (aka endogenous raw)
     if totalReads == 0.0:
         endogenousRaw = 0.000000
-        print("WARNING: no reads in the fastq input, Percent on target raw (%) set to 0.000000")
+        print("WARNING: no reads in the fastq input, percent on target raw (%) set to 0.000000")
     elif mappedRaw == 0.0:
         endogenousRaw = 0.000000
         print("WARNING: no mapped reads, Percent on target raw (%) set to 0.000000")
@@ -75,7 +75,7 @@ try:
         endogenousRaw = float("{0:.6f}".format(round((mappedRaw / totalReads * 100), 6)))
 except:
     if args.verbose:
-        print("No samtools flagstat --raw provided. \nWARNING: none of the Percent on target stats will be calculated")
+        print("No samtools flagstat --raw provided. \nWARNING: none of the percent on target stats will be calculated")
 
 try:
     with open(args.qualityfiltered, 'r') as qF:
@@ -86,7 +86,7 @@ try:
     if args.raw is not None:
         if totalReads == 0.0:
             endogenousQF = 0.000000
-            print("WARNING: no reads in the fastq input, Percent on target raw (%) set to 0.000000")
+            print("WARNING: no reads in the fastq input, percent on target raw (%) set to 0.000000")
         elif mappedPost == 0.0:
             endogenousQF = 0.000000
             print("WARNING: no mapped reads, Percent on target modified (%) set to 0.000000")
@@ -94,7 +94,7 @@ try:
             endogenousQF = float("{0:.6f}".format(round(( mappedPost / totalReads * 100),6)))
 except:
     if args.verbose:
-        print("No samtools flagstat --qualityfiltered provided. \nWARNING: Percent on target Modified stat will not be calculated")
+        print("No samtools flagstat --qualityfiltered provided. \nWARNING: Percent on target modified stat will not be calculated")
 
 try:
     with open(args.deduplicated, 'r') as deDup:
@@ -107,10 +107,10 @@ try:
     if args.raw is not None:
         if totalReads == 0.0:
             endogenousDeDup = 0.000000
-            print("WARNING: no reads in the fastq input, Percent on target postDeDup (%) set to 0.000000")
+            print("WARNING: no reads in the fastq input, percent on target post-deduplication (%) set to 0.000000")
         elif mappedDedup == 0.0:
             endogenousDeDup = 0.000000
-            print("WARNING: no mapped reads, Percent on target postDeDup (%) set to 0.000000")
+            print("WARNING: no mapped reads, Percent on target post-deduplication (%) set to 0.000000")
         else:
             endogenousDeDup = float("{0:.6f}".format(round((mappedDedup / totalReads * 100),6)))
     #Calculate clonality (aka cluster factor)
@@ -118,16 +118,16 @@ try:
         clonality=float("{0:.6f}".format(round(( totalPreDedup / mappedDedup),6)))
     except ZeroDivisionError:
         clonality = 0
-        print("WARNING: non mapped reads postDeDup and/or preDeDup, check your BAM file. Clonality set to 0.000000")
+        print("WARNING: non mapped reads post- and/or pre-deduplication, check your BAM file. Clonality set to 0.000000")
     #Calculate Percentage of Duplicates
     try:
         percentDuplicates=float("{0:.6f}".format(round((((totalPreDedup - mappedDedup) / totalPreDedup) * 100),6)))
     except ZeroDivisionError:
         percentDuplicates = 0
-        print("WARNING: non mapped reads postDeDup and/or preDeDup, check your BAM file. Percent Duplicates set to 0.000000")
+        print("WARNING: non mapped reads post- and/or pre-deduplication, check your BAM file. Percent duplicates set to 0.000000")
 except:
     if args.verbose:
-        print("No samtools flagstat --deduplicated provided. \nWARNING: Percent on target postDedup, Clonality and Percent of Duplicates stats will not be calculated!")
+        print("No samtools flagstat --deduplicated provided. \nWARNING: Percent on target post-deduplication, clonality and percent of duplicates stats will not be calculated!")
 
 #Setting the name depending on the -name flag:
 if args.name is not None:
@@ -170,9 +170,9 @@ if args.raw is not None:
             }
             print("Percent on target raw (%):",endogenousRaw)
             print("Percent on target quality filtered (%):",endogenousQF)
-            print("Percent on target postDedup (%):", endogenousDeDup)
+            print("Percent on target post-deduplication (%):", endogenousDeDup)
             print("Clonality:",clonality)
-            print("Percent Duplicates (%):", percentDuplicates)
+            print("Percent duplicates (%):", percentDuplicates)
         # Raw + QF: Percent target Raw, Percent target quality filtered
         else:
             jsonOutput={
@@ -197,7 +197,7 @@ if args.raw is not None:
                     "percent_on_target": { "max": 100, "min": 0, "title": "Percent on target (%)", "format": '{:,.2f}'},
                     "percent_on_target_postdedup": { "max": 100, "min": 0, "title": "Percent on target postdedup (%)", "format": '{:,.2f}'},
                     "clonality": { "max": 100, "min": 0, "title": "Clonality", "format": '{:,.2f}'},
-                    "percent_duplicates": { "max": 100, "min": 0, "title": "Percent Duplicates (%)", "format": '{:,.2f}'}
+                    "percent_duplicates": { "max": 100, "min": 0, "title": "Percent duplicates (%)", "format": '{:,.2f}'}
                 },
                 "data": {
                     name : { 
@@ -209,7 +209,7 @@ if args.raw is not None:
                 },
             }
         print("Percent on target raw (%):",endogenousRaw)
-        print("Percent on target postDedup (%):", endogenousDeDup)
+        print("Percent on target post-deduplication (%):", endogenousDeDup)
         print("Clonality:",clonality)
         print("Percent Duplicates (%):", percentDuplicates)
     

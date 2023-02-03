@@ -1,5 +1,5 @@
 # endorS.py
-endorS.py calculates endogenous DNA from samtools flagstat files and print to screen. Additionally if -c is provided it can calculate the proportion of unique reads mapped when compared to all the reads mapped. 
+endorS.py calculates various endogenous DNA and deduplication metrics  from samtools flagstat files and print to screen.
 
 ## Usage
 ```bash
