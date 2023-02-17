@@ -11,9 +11,9 @@ Aida Andrades Valtueña (aida.andrades[at]gmail.com)
 
 ## Description and options
 ```bash
-endorS.py calculates Percent on target (aka Endogenous DNA) from samtools flagstat files and print to screen.
-The Percent on target reported will be different depending on the combination of samtools flagstat provided.
-This program also calculates clonality (aka Cluster Factor) and percent duplicates when the flagstat file after duplicate removal is provided
+endorS.py calculates percent on target (aka Endogenous DNA) from samtools flagstat files and print to screen.
+The percent on target reported will be different depending on the combination of samtools flagstat provided.
+This program also calculates clonality (aka 'cluster factor') and percent duplicates when the flagstat file after duplicate removal is provided
 Use --output flag to write results to a file
 
 positional arguments:

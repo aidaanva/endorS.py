@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-"""Script to calculate the Percent on target (aka Endogenous DNA), clonality, and percent of duplicates in a sample from samtools flag stats.
+"""Script to calculate the percent on target (aka endogenous DNA), clonality, and percent of duplicates in a sample from samtools flag stats.
 It accepts can accept up to three files: pre-quality, post-quality filtering and post-dedup. We recommend
 to use all files but you can also use with a combination of any those samtools flagstats.
 """
@@ -18,9 +18,9 @@ parser = argparse.ArgumentParser(prog='endorS.py',
         Aida Andrades Valtueña (aida.andrades[at]gmail.com)
         
         description:
-        %(prog)s calculates Percent on target (aka Endogenous DNA) from samtools flagstat files and print to screen.
-        The Percent on target reported will be different depending on the combination of samtools flagstat provided.
-        This program also calculates clonality (aka Cluster Factor) and percent duplicates when the flagstat file after duplicate removal is provided
+        %(prog)s calculates percent on target (aka Endogenous DNA) from samtools flagstat files and print to screen.
+        The percent on target reported will be different depending on the combination of samtools flagstat provided.
+        This program also calculates clonality (aka cluster factor) and percent duplicates when the flagstat file after duplicate removal is provided
         Use --output flag to write results to a file
         '''))
 parser.add_argument('--raw', '-r',
@@ -89,7 +89,7 @@ try:
             print("WARNING: no reads in the fastq input, percent on target raw (%) set to 0.000000")
         elif mappedPost == 0.0:
             endogenousQF = 0.000000
-            print("WARNING: no mapped reads, Percent on target modified (%) set to 0.000000")
+            print("WARNING: no mapped reads, percent on target modified (%) set to 0.000000")
         else:
             endogenousQF = float("{0:.6f}".format(round(( mappedPost / totalReads * 100),6)))
 except:
