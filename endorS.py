@@ -252,7 +252,7 @@ if args.output is not None:
     # #Writing the json output:
     fileName = name + "_percent_on_target_mqc.json"
     #print(fileName)
-    # with open(fileName, "w+") as outfile:
-    json.dump(jsonOutput, outfile)
+    with open(fileName, "w+") as outfile:
+        json.dump(jsonOutput, outfile)
     print(fileName,"has been generated")
 print("All done!")

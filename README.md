@@ -16,10 +16,6 @@ The percent on target reported will be different depending on the combination of
 This program also calculates clonality (aka 'cluster factor') and percent duplicates when the flagstat file after duplicate removal is provided
 Use --output flag to write results to a file
 
-positional arguments:
-  <samplefile>.stats    output of samtools flagstat in a txt file (at least one required). If two files are supplied, the mapped reads of the second file is divided by the total reads in
-                        the first, since it assumes that the <samplefile.stats> are related to the same sample. Useful after BAM filtering
-
 optional arguments:
   -h, --help            show this help message and exit
   --raw [<samplefile>.stats], -r [<samplefile>.stats]
