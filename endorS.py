@@ -37,7 +37,7 @@ parser.add_argument('--deduplicated', '-d',
                     help= 'output of samtools flagstat in a txt file, whereby duplicate removal has been performed on the input reads')
 #parser.add_argument('samtoolsfiles', metavar='<samplefile>.stats', type=str, nargs='+',
 #                    help='output of samtools flagstat in a txt file (at least one required). If two files are supplied, the mapped reads of the second file is divided by the total reads in the first, since it assumes that the <samplefile.stats> are related to the same sample. Useful after BAM filtering')
-parser.add_argument('-v','--version', action='version', version='%(prog)s 1.2')
+parser.add_argument('-v','--version', action='version', version='%(prog)s 1.3')
 parser.add_argument('--output', '-o', nargs='?', help='specify a file format for an output file. Options: <json> for a MultiQC json output. Default: none')
 parser.add_argument('--name', '-n', nargs='?', help='specify name for the output file. Default: extracted from the first samtools flagstat file provided')
 parser.add_argument('--verbose', '-e', help='increase output verbosity', action='store_true')
@@ -54,6 +54,10 @@ if ((args.raw is None) and (args.qualityfiltered is None) and (args.deduplicated
 
 if ((args.raw is None) and (args.deduplicated is None)):
     print("ERROR: only --qualityfiltered samtools flagstat file provided. No stats can be calculated")
+    sys.exit(2)
+
+if ((args.raw is None) and (args.qualityfiltered is None)):
+    print("ERROR: only --deduplicated samtools flagstat file provided. No stats can be calculated")
     sys.exit(2)
 
 try:
@@ -99,10 +103,16 @@ except:
 try:
     with open(args.deduplicated, 'r') as deDup:
         contentsdeDup= deDup.read()
-    #Extract number of reads pre dedup
-    totalPreDedup = float((re.findall(r'^([0-9]+) \+ [0-9]+ in total',contentsdeDup))[0])
-    #Extract number of mapped reads pre-quality filtering:
+    
+    #Extract number of mapped reads post-dedup:
     mappedDedup = float((re.findall(r'([0-9]+) \+ [0-9]+ mapped ',contentsdeDup))[0])
+
+    #Extract number of reads pre dedup: can only be extracted from either raw or filtered
+    if args.qualityfiltered is not None:
+        totalPreDedup = mappedPost
+    elif args.raw is not None:
+        totalPreDedup = mappedRaw
+    
     #Check if --raw provided and calculate Percent on target postDedup
     if args.raw is not None:
         if totalReads == 0.0:
